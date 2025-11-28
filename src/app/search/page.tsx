@@ -78,7 +78,7 @@ function SearchContent() {
                   <h2 className="text-2xl font-bold mb-4">НКО ({results.ngos.length})</h2>
                   <div className="space-y-4">
                     {results.ngos.map((ngo: any) => (
-                      <Link key={ngo.id} href={`/ngo/${ngo.id}`} className="card">
+                      <Link key={ngo.id} href={`/ngo/${ngo.id}`} className="card" className="block">
                         <h3 className="font-bold text-lg mb-2">{ngo.brandName}</h3>
                         <p className="text-gray-600 text-sm line-clamp-2">{stripHtml(ngo.description)}</p>
                       </Link>
@@ -92,7 +92,7 @@ function SearchContent() {
                   <h2 className="text-2xl font-bold mb-4">Мероприятия ({results.events.length})</h2>
                   <div className="space-y-4">
                     {results.events.map((event: any) => (
-                      <Link key={event.id} href={`/events/${event.id}`} className="card">
+                      <Link key={event.id} href={`/events/${event.id}`} className="card" className="block">
                         <h3 className="font-bold text-lg mb-2">{event.title}</h3>
                         <p className="text-gray-600 text-sm">{event.city} • {event.ngo.brandName}</p>
                       </Link>
@@ -106,7 +106,7 @@ function SearchContent() {
                   <h2 className="text-2xl font-bold mb-4">Статьи ({results.articles.length})</h2>
                   <div className="space-y-4">
                     {results.articles.map((article: any) => (
-                      <Link key={article.id} href={`/resources/${article.slug}`} className="card">
+                      <Link key={article.id} href={`/resources/${article.slug}`} className="card" className="block">
                         <h3 className="font-bold text-lg mb-2">{article.title}</h3>
                         <p className="text-gray-600 text-sm line-clamp-2">{article.excerpt}</p>
                       </Link>
