@@ -1,0 +1,339 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  password      String?
+  image         String?
+  role          String    @default("VOLUNTEER") // VOLUNTEER, NGO, ADMIN, MODERATOR
+  city          String?
+  interests     String?   // JSON string for array
+  vkId          String?   @unique // VK user ID for OAuth
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  ngo              NGO?
+  participations   EventParticipation[]
+  notifications    Notification[]
+  favorites        Favorite[]
+  accounts         Account[]
+  sessions         Session[]
+  supportTickets   SupportTicket[]
+  supportMessages  SupportMessage[]
+
+  @@index([email])
+  @@index([role])
+  @@index([vkId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model NGO {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Basic Info
+  legalName         String
+  brandName         String
+  inn               String    @unique
+  description       String
+  mission           String?
+
+  logo              String?
+  coverImage        String?
+
+  // Location
+  city              String
+  address           String
+  latitude          Float?
+  longitude         Float?
+
+  // Contacts
+  phone             String
+  email             String
+  website           String?
+  vkLink            String?
+  telegramLink      String?
+  instagramLink     String?
+
+  // Categories - stored as JSON string
+  categories        String    // JSON array
+  organizationType  String
+
+  // Status
+  status            String    @default("PENDING") // PENDING, APPROVED, REJECTED, BLOCKED
+  rejectionReason   String?
+
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  events            Event[]
+  projects          Project[]
+
+  @@index([city])
+  @@index([status])
+}
+
+model Event {
+  id              String        @id @default(cuid())
+  ngoId           String
+  ngo             NGO           @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+
+  title           String
+  description     String
+
+  // Date & Time
+  startDate       DateTime
+  endDate         DateTime?
+
+  // Location
+  address         String
+  city            String
+  latitude        Float?
+  longitude       Float?
+
+  // Volunteers
+  volunteersNeeded Int
+  volunteersCount  Int          @default(0)
+
+  // Type - stored as JSON string
+  helpType        String       // JSON array
+
+  // Status
+  status          String       @default("PUBLISHED") // DRAFT, PUBLISHED, COMPLETED, CANCELLED
+
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  participations  EventParticipation[]
+
+  @@index([ngoId])
+  @@index([city])
+  @@index([startDate])
+  @@index([status])
+}
+
+model EventParticipation {
+  id        String              @id @default(cuid())
+  eventId   String
+  event     Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status    String              @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED
+  attended  Boolean             @default(false)
+
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([status])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  ngoId       String
+  ngo         NGO      @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String
+  images      String?  // JSON array
+  startDate   DateTime?
+  endDate     DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ngoId])
+}
+
+model Article {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String
+  excerpt     String?
+  coverImage  String?
+  category    String
+  published   Boolean  @default(false)
+
+  // Support for videos and documents
+  videoUrl    String?  // Rutube, YouTube, etc.
+  pdfUrl      String?  // Link to PDF file
+  fileUrl     String?  // Link to other files
+
+  // Support for tags/hashtags and city filtering
+  tags        String?  // JSON array of tags
+  speaker     String?  // Speaker/author name
+  cities      String?  // JSON array of cities for filtering
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([category])
+  @@index([published])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title     String
+  message   String
+  type      String
+  read      Boolean  @default(false)
+  link      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([read])
+}
+
+model Favorite {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  itemType    String   // "event", "article", "ngo"
+  itemId      String   // ID of the favorited item
+
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, itemType, itemId])
+  @@index([userId])
+  @@index([itemType])
+}
+
+model City {
+  id          String   @id @default(cuid())
+  name        String
+  region      String
+  latitude    Float
+  longitude   Float
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@unique([name, region])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  icon        String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model SupportTicket {
+  id          String              @id @default(cuid())
+  subject     String
+  status      String              @default("OPEN") // OPEN, CLOSED
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    SupportMessage[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  closedAt    DateTime?
+
+  @@index([userId])
+  @@index([status])
+}
+
+model SupportMessage {
+  id          String         @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message     String
+  isAdmin     Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+
+  @@index([ticketId])
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  email       String
+  token       String    @unique
+  code        String    // 6-digit code
+  expiresAt   DateTime
+  used        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  @@index([email])
+  @@index([token])
+  @@index([code])
+}
+
+model EmailVerificationToken {
+  id          String    @id @default(cuid())
+  email       String
+  code        String    // 6-digit code
+  expiresAt   DateTime
+  verified    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  @@index([email])
+  @@index([code])
+}
